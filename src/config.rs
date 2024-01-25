@@ -26,7 +26,11 @@ impl KToolsConfig {
         if !config_file.exists() {
             let config = Self::default();
 
-            std::fs::create_dir_all(config_file.parent().unwrap())?;
+            let parent_dir = config_file
+                .parent()
+                .context("Could not find the configuration parent directory")?;
+
+            std::fs::create_dir_all(parent_dir)?;
             std::fs::write(config_file, serde_yaml::to_string(&config)?)?;
 
             return Ok(config);

@@ -21,12 +21,16 @@ pub struct KToolsCliArgs {
 #[derive(Parser)]
 pub struct GlobalArgs {
     /// Specify the name of the project (overrides crate name)
-    #[clap(long, value_parser, num_args = 1.., value_delimiter = ',')]
+    #[clap(long, value_parser, num_args = 0.., value_delimiter = ',')]
     pub contexts: Vec<String>,
 }
 
 #[derive(Parser)]
 pub enum Command {
+    /// Manage KTools configuration file
+    #[command(subcommand)]
+    Config(ConfigCommand),
+
     /// Create a consumer or producer for a given topic
     #[command(subcommand)]
     Kafka(KafkaCommand),
@@ -34,6 +38,12 @@ pub enum Command {
     /// Manage the schema registry, including subjects and schemas
     #[command(subcommand)]
     SchemaRegistry(SchemaRegistryCommand),
+}
+
+#[derive(Parser)]
+pub enum ConfigCommand {
+    /// Open the global configuration file for editing
+    Edit,
 }
 
 #[derive(Parser)]
