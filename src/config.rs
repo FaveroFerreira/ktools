@@ -51,7 +51,7 @@ pub struct KToolsContext {
 impl Default for KToolsConfig {
     fn default() -> Self {
         Self {
-            user: "guilherme.ferreira".into(),
+            user: "user.name".into(),
             contexts: HashMap::from([
                 (
                     "local".into(),
@@ -62,10 +62,7 @@ impl Default for KToolsConfig {
                         }),
                         schema_registry: Some(SchemaRegistryConfig {
                             url: "http://localhost:8081".into(),
-                            basic_auth: Some(BasicAuth {
-                                username: "admin".into(),
-                                password: "admin".into(),
-                            }),
+                            basic_auth: None,
                         }),
                     },
                 ),
