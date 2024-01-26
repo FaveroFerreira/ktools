@@ -10,5 +10,5 @@ pub struct SchemaRegistryConfig {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct BasicAuth {
     pub username: String,
-    pub password: String,
+    pub password: Option<String>,
 }

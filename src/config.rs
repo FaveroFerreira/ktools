@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
-use anyhow::Context;
+use anyhow::{Context, Ok};
 use serde::{Deserialize, Serialize};
 
 use crate::kafka::config::KafkaConfig;
@@ -16,27 +17,33 @@ pub struct KToolsConfig {
 }
 
 impl KToolsConfig {
-    pub fn load_global() -> anyhow::Result<Self> {
-        // verify if the config file exists
-        let config_file = dirs::config_dir()
+    pub fn path() -> anyhow::Result<PathBuf> {
+        let path = dirs::config_dir()
             .context("Could not find the config directory")?
             .join("ktools")
             .join("config");
 
-        if !config_file.exists() {
+        Ok(path)
+    }
+
+    pub fn load() -> anyhow::Result<Self> {
+        // verify if the config file exists
+        let cfg_path = Self::path()?;
+
+        if !cfg_path.exists() {
             let config = Self::default();
 
-            let parent_dir = config_file
+            let parent_dir = cfg_path
                 .parent()
                 .context("Could not find the configuration parent directory")?;
 
             std::fs::create_dir_all(parent_dir)?;
-            std::fs::write(config_file, serde_yaml::to_string(&config)?)?;
+            std::fs::write(cfg_path, serde_yaml::to_string(&config)?)?;
 
             return Ok(config);
         }
 
-        let config = std::fs::read_to_string(config_file)?;
+        let config = std::fs::read_to_string(cfg_path)?;
 
         Ok(serde_yaml::from_str(&config)?)
     }
@@ -77,7 +84,7 @@ impl Default for KToolsConfig {
                             url: "http://localhost:8081".into(),
                             basic_auth: Some(BasicAuth {
                                 username: "admin".into(),
-                                password: "admin".into(),
+                                password: Some("admin".into()),
                             }),
                         }),
                     },

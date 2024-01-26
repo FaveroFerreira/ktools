@@ -11,7 +11,7 @@ use clap::Parser;
 )]
 pub struct KToolsCliArgs {
     #[command(flatten)]
-    pub global: GlobalArgs,
+    pub options: Options,
 
     #[command(subcommand)]
     pub command: Command,
@@ -19,10 +19,10 @@ pub struct KToolsCliArgs {
 
 /// Global arguments to be used in all subcommands
 #[derive(Parser)]
-pub struct GlobalArgs {
-    /// Specify the name of the project (overrides crate name)
-    #[clap(long, value_parser, num_args = 0.., value_delimiter = ',')]
-    pub contexts: Vec<String>,
+pub struct Options {
+    /// Specify the context to be used with the command
+    #[clap(short, long)]
+    pub context: Option<String>,
 }
 
 #[derive(Parser)]
@@ -71,12 +71,15 @@ pub enum SchemaRegistryCommand {
 
     /// Compare a schema with the one in the schema registry
     Diff {
+        /// The subject of the schema to be compared
         #[arg(short, long)]
         subject: String,
 
+        /// The version of the schema to be compared
         #[arg(short, long)]
         version: Option<u32>,
 
+        /// The file containing the schema to be compared
         #[arg(short, long)]
         schema: PathBuf,
     },
@@ -86,18 +89,22 @@ pub enum SchemaRegistryCommand {
 pub enum KafkaCommand {
     /// Listen to kafka topic and print or save the messages
     Consume {
+        /// The topic to be consumed
         #[arg(short, long)]
         topic: String,
     },
 
     /// Send messages to a kafka topic
     Produce {
+        /// The topic to produce the messages
         #[arg(short, long)]
         topic: String,
 
+        /// The message to be sent
         #[arg(long, conflicts_with = "payload")]
         message: Option<String>,
 
+        /// The file containing the message to be sent
         #[arg(long, conflicts_with = "message")]
         payload: Option<PathBuf>,
     },
