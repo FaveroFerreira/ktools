@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::{Context, Ok};
+use anyhow::{bail, Context, Ok};
 use serde::{Deserialize, Serialize};
 
 use crate::kafka::config::KafkaConfig;
@@ -17,6 +17,27 @@ pub struct KToolsConfig {
 }
 
 impl KToolsConfig {
+    pub fn edit() -> anyhow::Result<()> {
+        let cfg_path = Self::path()?;
+
+        if !cfg_path.exists() {
+            Self::create()?;
+        }
+
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".into());
+
+        let status = std::process::Command::new(editor)
+            .arg(cfg_path)
+            .status()
+            .context("Failed to open the default system editor")?;
+
+        if !status.success() {
+            bail!("Failed to open the default system editor");
+        }
+
+        Ok(())
+    }
+
     pub fn path() -> anyhow::Result<PathBuf> {
         let path = dirs::config_dir()
             .context("Could not find the config directory")?
@@ -27,7 +48,18 @@ impl KToolsConfig {
     }
 
     pub fn load() -> anyhow::Result<Self> {
-        // verify if the config file exists
+        let cfg_path = Self::path()?;
+
+        if !cfg_path.exists() {
+            Self::create()?;
+        }
+
+        let config = std::fs::read_to_string(cfg_path)?;
+
+        Ok(serde_yaml::from_str(&config)?)
+    }
+
+    pub fn create() -> anyhow::Result<()> {
         let cfg_path = Self::path()?;
 
         if !cfg_path.exists() {
@@ -39,19 +71,16 @@ impl KToolsConfig {
 
             std::fs::create_dir_all(parent_dir)?;
             std::fs::write(cfg_path, serde_yaml::to_string(&config)?)?;
-
-            return Ok(config);
         }
 
-        let config = std::fs::read_to_string(cfg_path)?;
-
-        Ok(serde_yaml::from_str(&config)?)
+        Ok(())
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KToolsContext {
     pub kafka: Option<KafkaConfig>,
+    #[serde(alias = "schemaRegistry", alias = "schema-registry")]
     pub schema_registry: Option<SchemaRegistryConfig>,
 }
 

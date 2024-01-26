@@ -3,6 +3,9 @@ use std::fs;
 use anyhow::{anyhow, bail, Context};
 use clap::Parser;
 
+use kafka::client::KafkaClient;
+use serde_json::Value as JsonValue;
+
 use crate::cli::{
     Command, ConfigCommand, KToolsCliArgs, KafkaCommand, Options, SchemaRegistryCommand,
 };
@@ -20,7 +23,15 @@ pub struct KTools {
 
 impl KTools {
     pub fn new() -> anyhow::Result<Self> {
-        let config = KToolsConfig::load()?;
+        let config = match KToolsConfig::load() {
+            Ok(config) => config,
+            Err(err) => {
+                eprintln!("Could not load the configuration file: {}", err);
+                eprint!("Please, verify that the configuration file is valid.");
+                KToolsConfig::edit()?;
+                std::process::exit(1)
+            }
+        };
 
         Ok(Self { config })
     }
@@ -62,7 +73,49 @@ impl KTools {
     }
 
     async fn kafka(self, options: Options, command: KafkaCommand) -> anyhow::Result<()> {
-        todo!()
+        let context = options.context.as_deref().ok_or(anyhow!(
+            "No context specified. Please, specify a context with the --context flag."
+        ))?;
+
+        let context = self.config.contexts.get(context).with_context(|| {
+            anyhow!(
+                "Could not find the context {:?}, please, check your configuration file.",
+                context
+            )
+        })?;
+
+        let kafka_client = KafkaClient::configure(&self.config.user, context)?;
+
+        match command {
+            KafkaCommand::Consume { topic, decode } => {
+                kafka_client.consume(&topic, decode).await?;
+                Ok(())
+            }
+            KafkaCommand::Produce {
+                topic,
+                message,
+                encode,
+                payload,
+                key,
+            } => {
+                let payload: JsonValue = match (message, payload) {
+                    (Some(message), None) => {
+                        serde_json::from_str(&message).context("Invalid JSON message")?
+                    }
+                    (None, Some(payload)) => {
+                        let text = fs::read_to_string(payload)?;
+                        serde_json::from_str(&text).context("Invalid JSON payload")?
+                    }
+                    _ => bail!("Either message or payload must be specified"),
+                };
+
+                kafka_client
+                    .produce(encode, &topic, key, serde_json::to_vec(&payload)?)
+                    .await?;
+
+                Ok(())
+            }
+        }
     }
 
     async fn schema_registry(

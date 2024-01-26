@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
 #[derive(Parser)]
 #[command(
@@ -92,6 +92,10 @@ pub enum KafkaCommand {
         /// The topic to be consumed
         #[arg(short, long)]
         topic: String,
+
+        /// Indicates the encoding of the messages
+        #[arg(short, long, default_value = "raw")]
+        decode: CodecKind,
     },
 
     /// Send messages to a kafka topic
@@ -104,8 +108,25 @@ pub enum KafkaCommand {
         #[arg(long, conflicts_with = "payload")]
         message: Option<String>,
 
+        /// Indicates the encoding of the messages
+        #[arg(short, long, default_value = "raw")]
+        encode: CodecKind,
+
         /// The file containing the message to be sent
         #[arg(long, conflicts_with = "message")]
         payload: Option<PathBuf>,
+
+        /// The key of the message to be sent (if not specified will be empty)
+        #[arg(short, long)]
+        key: Option<String>,
     },
+}
+
+#[derive(Default, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum CodecKind {
+    Proto,
+    Avro,
+    Json,
+    #[default]
+    Raw,
 }
