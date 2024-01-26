@@ -2,8 +2,8 @@ use std::fs;
 
 use anyhow::{anyhow, bail, Context};
 use clap::Parser;
-use console::{style, Style};
-use similar::{ChangeTag, TextDiff};
+
+
 
 use kafka::client::KafkaClient;
 use serde_json::Value as JsonValue;
