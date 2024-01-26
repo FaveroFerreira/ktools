@@ -72,7 +72,7 @@ pub enum SchemaRegistryCommand {
     /// Compare a schema with the one in the schema registry
     Diff {
         /// The subject of the schema to be compared
-        #[arg(short, long)]
+        #[arg(long)]
         subject: String,
 
         /// The version of the schema to be compared
@@ -80,7 +80,7 @@ pub enum SchemaRegistryCommand {
         version: Option<u32>,
 
         /// The file containing the schema to be compared
-        #[arg(short, long)]
+        #[arg(long)]
         schema: PathBuf,
     },
 }

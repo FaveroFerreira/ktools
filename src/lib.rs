@@ -2,6 +2,8 @@ use std::fs;
 
 use anyhow::{anyhow, bail, Context};
 use clap::Parser;
+use console::{style, Style};
+use similar::{ChangeTag, TextDiff};
 
 use kafka::client::KafkaClient;
 use serde_json::Value as JsonValue;
@@ -172,19 +174,65 @@ impl KTools {
                 let schema = fs::read_to_string(schema)?;
                 let sr_schema = schema_registry_client.get_schema(&subject, version).await?;
 
-                let diff = similar::TextDiff::from_chars(&sr_schema[..], &schema[..]);
+                let formatted_schema = serde_json::to_string_pretty(&serde_json::from_str::<
+                    serde_json::Value,
+                >(&schema)?)?;
+                let formatted_sr_schema =
+                    serde_json::to_string_pretty(&serde_json::from_str::<serde_json::Value>(
+                        &sr_schema,
+                    )?)?;
 
-                for change in diff.iter_all_changes() {
-                    let sign = match change.tag() {
-                        similar::ChangeTag::Delete => "-",
-                        similar::ChangeTag::Insert => "+",
-                        similar::ChangeTag::Equal => " ",
-                    };
-                    print!("{}{}", sign, change);
+                if formatted_schema == formatted_sr_schema {
+                    println!("No differences found");
+                    return Ok(());
+                }
+
+                let diff = similar::TextDiff::from_lines(&formatted_sr_schema, &formatted_schema);
+
+                for (idx, group) in diff.grouped_ops(3).iter().enumerate() {
+                    if idx > 0 {
+                        println!("{:-^1$}", "-", 80);
+                    }
+                    for op in group {
+                        for change in diff.iter_inline_changes(op) {
+                            let (sign, s) = match change.tag() {
+                                similar::ChangeTag::Delete => ("-", console::Style::new().red()),
+                                similar::ChangeTag::Insert => ("+", console::Style::new().green()),
+                                similar::ChangeTag::Equal => (" ", console::Style::new().dim()),
+                            };
+                            print!(
+                                "{}{} |{}",
+                                console::style(Line(change.old_index())).dim(),
+                                console::style(Line(change.new_index())).dim(),
+                                s.apply_to(sign).bold(),
+                            );
+                            for (emphasized, value) in change.iter_strings_lossy() {
+                                if emphasized {
+                                    print!("{}", s.apply_to(value).underlined().on_black());
+                                } else {
+                                    print!("{}", s.apply_to(value));
+                                }
+                            }
+                            if change.missing_newline() {
+                                println!();
+                            }
+                        }
+                    }
                 }
 
                 Ok(())
             }
+        }
+    }
+}
+
+struct Line(Option<usize>);
+
+impl std::fmt::Display for Line {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self.0 {
+            None => write!(f, "    "),
+            Some(idx) => write!(f, "{:<4}", idx + 1),
         }
     }
 }
