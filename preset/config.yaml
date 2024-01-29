@@ -1,0 +1,20 @@
+user: guilherme.favero
+contexts:
+  local:
+    kafka:
+      bootstrapServers: localhost:9092
+    schemaRegistry:
+      url: http://localhost:8081
+  dev:
+    kafka:
+      bootstrapServers: my-bootstrap-server-host:9092
+      properties:
+        sasl.username: admin
+        sasl.password: admin
+        security.protocol: SASL_SSL
+        sasl.mechanism: SCRAM-SHA-256
+    schemaRegistry:
+      url: https://my-schema-registry-host
+      basicAuth:
+        username: admin
+        password: admin

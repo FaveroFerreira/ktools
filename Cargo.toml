@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.79"
-async-trait = "0.1.51"
-console = "0.15.0"
+anyhow = "1.0"
+async-trait = "0.1"
+console = "0.15"
 clap = { version = "4.4", features = ["derive"] }
 dirs = "5.0"
 futures = "0.3"
@@ -25,8 +25,10 @@ schema_registry_converter = { version = "4.0", features = [
 ] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.9.30"
+serde_yaml = "0.9"
 tokio = { version = "1.35", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-similar = { version = "2.4.0", features = ["inline"] }
+similar = { version = "2.4", features = ["inline"] }
+ratatui = "0.25"
+crossterm = "0.27"
