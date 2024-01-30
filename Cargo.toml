@@ -2,6 +2,7 @@
 name = "ktools"
 version = "0.1.0"
 edition = "2021"
+description = "A collection of tools for working with Kafka and Schema Registry from the terminal."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,9 +27,12 @@ schema_registry_converter = { version = "4.0", features = [
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+strum = { version = "0.26", features = ["derive"] }
 tokio = { version = "1.35", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 similar = { version = "2.4", features = ["inline"] }
-ratatui = "0.25"
+ratatui = { version = "0.25", features = ["serde"] }
 crossterm = "0.27"
+tui-input = "0.8"
+toml = "0.8"

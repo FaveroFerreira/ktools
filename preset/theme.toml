@@ -1,0 +1,7 @@
+# Tab
+tab_active = { fg = "Black", bg = "LightBlue" }
+tab_inactive = { fg = "White", bg = "DarkGray" }
+tab_width = 1
+
+# Border
+border_style = { fg = "Gray" }
