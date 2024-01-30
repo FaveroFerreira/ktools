@@ -75,8 +75,15 @@ impl Ui {
     }
 
     fn render_content(&self, area: Rect, buf: &mut Buffer) {
+        let block = Block::new()
+            .title("CONTENT")
+            .title_alignment(Alignment::Left)
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(self.theme.border_style.into());
+
         Paragraph::new(self.tab.to_string())
-            .block(Block::default().borders(Borders::ALL))
+            .block(block)
             .render(area, buf);
     }
 
