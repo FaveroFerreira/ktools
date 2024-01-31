@@ -1,6 +1,6 @@
 use anyhow::Result;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, BorderType, Borders, Padding, Paragraph, Tabs, Widget};
+use ratatui::widgets::{Block, BorderType, Borders, Paragraph, Tabs, Widget};
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
 
 use crate::ui::theme::Theme;
@@ -22,6 +22,8 @@ pub enum Tab {
 pub struct Ui {
     tab: Tab,
     theme: Theme,
+    content: Option<String>,
+    show_help: bool,
 }
 
 impl Ui {
@@ -29,6 +31,8 @@ impl Ui {
         Ok(Self {
             tab: Tab::default(),
             theme: Theme::load()?,
+            show_help: false,
+            content: None,
         })
     }
 
@@ -41,6 +45,11 @@ impl Ui {
             ])
             .direction(Direction::Vertical)
             .split(area);
+
+        if self.show_help {
+            self.render_help(area, buf);
+            return;
+        }
 
         self.render_title(chunks[0], buf);
         self.render_tabs(chunks[1], buf);
@@ -85,6 +94,30 @@ impl Ui {
         Paragraph::new(self.tab.to_string())
             .block(block)
             .render(area, buf);
+    }
+
+    pub fn render_help(&self, area: Rect, buf: &mut Buffer) {
+        let block = Block::new()
+            .title("HELP")
+            .title_alignment(Alignment::Left)
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(self.theme.border_style.into());
+
+        let lines = vec![
+            Line::from("Press "),
+            Line::styled("ESC", Style::default().add_modifier(Modifier::BOLD)),
+            Line::from(" to switch tabs"),
+        ];
+
+        Paragraph::new(lines)
+            .block(block)
+            .alignment(Alignment::Left)
+            .render(area, buf);
+    }
+
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
     }
 
     pub fn next_tab(&mut self) {

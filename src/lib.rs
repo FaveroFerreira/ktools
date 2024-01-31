@@ -1,46 +1,47 @@
 use anyhow::Result;
-use crossterm::event::{Event, KeyCode};
-use ratatui::widgets::Widget;
-use ui::Ui;
+use crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 
+use crate::event::{Event, EventObserver};
 use crate::term::Term;
+use crate::ui::Ui;
 
 mod error;
+mod event;
 mod handler;
 mod term;
 mod ui;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum State {
-    Running,
-    Refresh,
-    Quit,
-}
-
 pub struct KTools {
     term: Term,
-    state: State,
     ui: Ui,
+    observer: EventObserver,
 }
 
 impl KTools {
     pub fn new() -> Result<Self> {
         let term = Term::init()?;
+        let observer = EventObserver::init()?;
+        let ui = Ui::init()?;
 
-        Ok(Self {
-            term,
-            ui: Ui::init()?,
-            state: State::Running,
-        })
+        Ok(Self { term, ui, observer })
     }
 
-    pub fn run(mut self) -> Result<()> {
-        while self.state != State::Quit {
+    pub async fn run(mut self) -> Result<()> {
+        self.update_ui()?;
+
+        let mut events = Vec::with_capacity(50);
+
+        loop {
+            self.observer.observe(&mut events).await;
+
+            for event in events.drain(..) {
+                self.handle(event)?;
+            }
+
+            events.clear();
             self.update_ui()?;
-            self.handle_input()?;
         }
 
-        self.term.cleanup()?;
         Ok(())
     }
 
@@ -55,25 +56,39 @@ impl KTools {
         Ok(())
     }
 
-    fn handle_input(&mut self) -> Result<()> {
-        if let Some(event) = self.term.poll_event()? {
-            match event {
-                Event::Key(key) => self.handle_key_press(key.code)?,
-                _ => {}
-            }
+    fn handle(&mut self, event: Event) -> Result<()> {
+        match event {
+            Event::Key(key_event) => self.handle_key(key_event)?,
+            Event::Mouse(mouse_event) => self.handle_mouse(mouse_event)?,
+            Event::Render => todo!(),
+            Event::Quit => self.quit(),
         }
 
         Ok(())
     }
 
-    fn handle_key_press(&mut self, key: KeyCode) -> Result<()> {
-        match key {
+    fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
             KeyCode::Left => self.ui.previous_tab(),
             KeyCode::Right => self.ui.next_tab(),
-            KeyCode::Char('q') => self.state = State::Quit,
+            KeyCode::Char('q') => self.quit(),
+            KeyCode::Char('?') => self.ui.toggle_help(),
+            KeyCode::Esc => self.ui.toggle_help(),
             _ => {}
         }
 
         Ok(())
+    }
+
+    fn handle_mouse(&mut self, mouse: MouseEvent) -> Result<()> {
+        todo!()
+    }
+
+    fn quit(&mut self) {
+        if self.term.cleanup().is_err() {
+            std::process::exit(1);
+        }
+
+        std::process::exit(0);
     }
 }

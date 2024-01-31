@@ -1,11 +1,17 @@
 use std::io::{self, Stdout};
 use std::ops::{Deref, DerefMut};
-use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::event::{self, Event};
-use crossterm::queue;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, LeaveAlternateScreen};
+use crossterm::cursor::SetCursorStyle;
+use crossterm::event::{
+    DisableBracketedPaste, DisableFocusChange, EnableBracketedPaste, EnableFocusChange,
+    KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, supports_keyboard_enhancement, EnterAlternateScreen,
+    LeaveAlternateScreen,
+};
+use crossterm::{execute, queue};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
@@ -17,28 +23,47 @@ impl Term {
         let mut terminal = Terminal::new(backend)?;
 
         enable_raw_mode()?;
-        queue!(io::stdout(), LeaveAlternateScreen)?;
+        queue!(
+            io::stdout(),
+            EnterAlternateScreen,
+            EnableBracketedPaste,
+            EnableFocusChange
+        )?;
+
+        if supports_keyboard_enhancement()? {
+            queue!(
+                io::stdout(),
+                PushKeyboardEnhancementFlags(
+                    KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+                        | KeyboardEnhancementFlags::REPORT_ALTERNATE_KEYS
+                )
+            )?;
+        }
+
+        terminal.hide_cursor()?;
         terminal.clear()?;
+        terminal.flush()?;
 
         Ok(Self(terminal))
     }
 
     pub fn cleanup(&mut self) -> Result<()> {
-        disable_raw_mode()?;
-        queue!(io::stdout(), LeaveAlternateScreen)?;
-        self.flush()?;
-
-        Ok(())
-    }
-
-    pub fn poll_event(&mut self) -> Result<Option<Event>> {
-        let has_event = event::poll(Duration::from_millis(16))?;
-
-        if has_event {
-            return Ok(Some(event::read()?));
+        if supports_keyboard_enhancement()? {
+            execute!(io::stdout(), PopKeyboardEnhancementFlags)?;
         }
 
-        Ok(None)
+        execute!(
+            io::stdout(),
+            DisableFocusChange,
+            DisableBracketedPaste,
+            LeaveAlternateScreen,
+            SetCursorStyle::DefaultUserShape
+        )?;
+
+        self.show_cursor()?;
+        disable_raw_mode()?;
+
+        Ok(())
     }
 }
 
