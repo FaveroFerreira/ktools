@@ -29,16 +29,8 @@ impl KTools {
     pub async fn run(mut self) -> Result<()> {
         self.update_ui()?;
 
-        let mut events = Vec::with_capacity(50);
-
-        loop {
-            self.observer.observe(&mut events).await;
-
-            for event in events.drain(..) {
-                self.handle(event)?;
-            }
-
-            events.clear();
+        while let Some(event) = self.observer.observe().await {
+            self.handle(event)?;
             self.update_ui()?;
         }
 
@@ -47,10 +39,7 @@ impl KTools {
 
     fn update_ui(&mut self) -> Result<()> {
         self.term.draw(|frame| {
-            let area = frame.size();
-            let buf = frame.buffer_mut();
-
-            self.ui.render(area, buf);
+            self.ui.render(frame);
         })?;
 
         Ok(())
@@ -68,19 +57,34 @@ impl KTools {
     }
 
     fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
+        if self.ui.is_editing() {
+            self.handle_edit(key);
+            return Ok(());
+        }
+
         match key.code {
+            KeyCode::Char('q') => self.quit(),
+            KeyCode::Char('?') => self.ui.show_help(),
             KeyCode::Left => self.ui.previous_tab(),
             KeyCode::Right => self.ui.next_tab(),
-            KeyCode::Char('q') => self.quit(),
-            KeyCode::Char('?') => self.ui.toggle_help(),
-            KeyCode::Esc => self.ui.toggle_help(),
+            KeyCode::Char(':') => self.ui.enter_edit_mode(),
             _ => {}
         }
 
         Ok(())
     }
 
-    fn handle_mouse(&mut self, mouse: MouseEvent) -> Result<()> {
+    fn handle_edit(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc => self.ui.enter_normal_mode(),
+            KeyCode::Enter => self.ui.enter_normal_mode(),
+            KeyCode::Backspace => self.ui.delete_char(),
+            KeyCode::Char(c) => self.ui.input_char(c),
+            _ => {}
+        }
+    }
+
+    fn handle_mouse(&mut self, _mouse: MouseEvent) -> Result<()> {
         todo!()
     }
 

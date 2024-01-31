@@ -39,10 +39,8 @@ impl EventObserver {
         Ok(observer)
     }
 
-    pub async fn observe(&mut self, buffer: &mut Vec<Event>) {
-        if self.receiver.recv_many(buffer, 50).await > 0 {
-            return;
-        }
+    pub async fn observe(&mut self) -> Option<Event> {
+        self.receiver.recv().await
     }
 
     pub fn observe_system_events(&mut self) -> Result<JoinHandle<()>> {
